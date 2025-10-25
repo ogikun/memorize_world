@@ -159,6 +159,7 @@ class _QuestionViewState extends State<QuestionView> {
 
   void submitAnswer() {
     if (_formFieldKey.currentState?.validate() ?? false) {
+      hintCount = 0;
       widget.onAnswered(true);
     }
     _formFieldKey.currentState?.didChange('');
@@ -181,7 +182,7 @@ class _QuestionViewState extends State<QuestionView> {
         const SizedBox(height: 8),
         Image.asset(
           'assets/flags/${widget.country.imageName}.gif',
-          width: double.infinity,
+          height: 80,
         ),
         const SizedBox(height: 8),
         Text(
