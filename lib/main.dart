@@ -1,0 +1,1920 @@
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+      ),
+      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+    );
+  }
+}
+
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({super.key, required this.title});
+
+  final String title;
+
+  @override
+  State<MyHomePage> createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: ListView.builder(
+        itemCount: Area.values.length,
+        itemBuilder: (context, index) {
+          final area = Area.values[index];
+          return ListTile(
+            title: Text(area.name),
+            subtitle: Text('国の数: ${area.countries.length}'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => QuestionPage(
+                            area: area,
+                            questionType: QuestionType.countryName,
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text('国名')),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => QuestionPage(
+                            area: area,
+                            questionType: QuestionType.capitalCity,
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text('首都')),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+enum QuestionType {
+  countryName,
+  capitalCity,
+}
+
+class QuestionPage extends StatefulWidget {
+  const QuestionPage(
+      {super.key, required this.area, required this.questionType});
+
+  final Area area;
+  final QuestionType questionType;
+
+  @override
+  State<QuestionPage> createState() => _QuestionPageState();
+}
+
+class _QuestionPageState extends State<QuestionPage> {
+  List<Country> remainingCountries = <Country>[];
+  List<Country> correctQuestions = <Country>[];
+  List<Country> gaveUpQuestions = <Country>[];
+
+  @override
+  void initState() {
+    remainingCountries = List<Country>.from(widget.area.countries)..shuffle();
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = widget.questionType == QuestionType.countryName ? '国名' : '首都';
+
+    return Scaffold(
+      appBar: AppBar(title: Text('${widget.area.name} - $title')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: remainingCountries.isEmpty
+            ? ResultView(
+                correctQuestions: correctQuestions,
+                gaveUpQuestions: gaveUpQuestions,
+              )
+            : QuestionView(
+                country: remainingCountries.first,
+                questionType: widget.questionType,
+                onAnswered: (isCorrect) {
+                  setState(() {
+                    final country = remainingCountries.removeAt(0);
+                    if (isCorrect) {
+                      correctQuestions.add(country);
+                    } else {
+                      gaveUpQuestions.add(country);
+                    }
+                  });
+                },
+              ),
+      ),
+    );
+  }
+}
+
+class QuestionView extends StatefulWidget {
+  const QuestionView(
+      {super.key,
+      required this.country,
+      required this.questionType,
+      required this.onAnswered});
+
+  final Country country;
+  final QuestionType questionType;
+  final ValueChanged<bool> onAnswered;
+
+  @override
+  State<QuestionView> createState() => _QuestionViewState();
+}
+
+class _QuestionViewState extends State<QuestionView> {
+  final _formFieldKey = GlobalKey<FormFieldState>();
+  int hintCount = 0;
+
+  void submitAnswer() {
+    if (_formFieldKey.currentState?.validate() ?? false) {
+      widget.onAnswered(true);
+    }
+    _formFieldKey.currentState?.didChange('');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final answer = widget.questionType == QuestionType.countryName
+        ? widget.country.name
+        : widget.country.capitalCity;
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          widget.questionType == QuestionType.countryName
+              ? 'この国の名前は？'
+              : 'この国の首都は？',
+        ),
+        const SizedBox(height: 8),
+        Image.asset(
+          'assets/flags/${widget.country.imageName}.gif',
+          width: double.infinity,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          widget.questionType == QuestionType.countryName
+              ? '首都：${widget.country.capitalCity}'
+              : widget.country.name,
+        ),
+        const SizedBox(height: 16),
+        const Text('答え'),
+        Builder(
+          builder: (context) {
+            String display = '';
+            for (int i = 0; i < answer.length; i++) {
+              if (i < hintCount) {
+                display += answer[i];
+              } else {
+                display += '＿';
+              }
+            }
+            return Text(
+              display,
+              style: const TextStyle(fontSize: 32),
+            );
+          },
+        ),
+        TextButton(
+            onPressed: () {
+              setState(() {
+                hintCount++;
+              });
+            },
+            child: const Text('ヒント')),
+        const SizedBox(height: 32),
+        TextFormField(
+          key: _formFieldKey,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+          onFieldSubmitted: (_) {
+            submitAnswer();
+          },
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return '回答を入力してください';
+            }
+            if (value != answer) {
+              return '不正解です';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+                child: OutlinedButton(
+                    onPressed: () {
+                      widget.onAnswered(false);
+                    },
+                    child: const Text('あきらめる'))),
+            const SizedBox(width: 8),
+            Expanded(
+              child: FilledButton(
+                onPressed: submitAnswer,
+                child: const Text('回答する'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class ResultView extends StatelessWidget {
+  const ResultView({
+    super.key,
+    required this.correctQuestions,
+    required this.gaveUpQuestions,
+  });
+
+  final List<Country> correctQuestions;
+  final List<Country> gaveUpQuestions;
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+        length: 2,
+        child: Column(
+          children: [
+            const TabBar(tabs: [
+              Tab(text: '正解した問題'),
+              Tab(text: 'あきらめた問題'),
+            ]),
+            Expanded(
+              child: TabBarView(children: [
+                ListView.builder(
+                  itemCount: correctQuestions.length,
+                  itemBuilder: (context, index) {
+                    final country = correctQuestions[index];
+                    return ListTile(
+                      title: Text(country.name),
+                      subtitle: Text('首都: ${country.capitalCity}'),
+                    );
+                  },
+                ),
+                ListView.builder(
+                  itemCount: gaveUpQuestions.length,
+                  itemBuilder: (context, index) {
+                    final country = gaveUpQuestions[index];
+                    return ListTile(
+                      title: Text(country.name),
+                      subtitle: Text('首都: ${country.capitalCity}'),
+                    );
+                  },
+                ),
+              ]),
+            ),
+          ],
+        ));
+  }
+}
+
+enum Area {
+  all('すべて'),
+  oceania('大洋州'),
+  asia('アジア'),
+  africa('アフリカ'),
+  europe('欧州'),
+  middleEast('中東'),
+  northAmerica('北米'),
+  latinAmerica('中南米');
+
+  const Area(this.name);
+
+  final String name;
+
+  List<Country> get countries {
+    if (this == Area.all) {
+      return Country.all;
+    }
+    return Country.all.where((country) => country.area == name).toList();
+  }
+}
+
+class Country {
+  const Country({
+    required this.name,
+    required this.englishName,
+    required this.capitalCity,
+    required this.area,
+    required this.imageName,
+    required this.language,
+    required this.currency,
+  });
+  final String area;
+  final String name;
+  final String englishName;
+  final String capitalCity;
+  final String imageName;
+  final String language;
+  final String currency;
+
+  static List<Country> all = [
+    const Country(
+        area: '欧州',
+        name: 'アイスランド',
+        englishName: 'Iceland',
+        capitalCity: 'レイキャビク',
+        imageName: 'iceland',
+        language: 'アイスランド語',
+        currency: 'アイスランド・クローナ'),
+    const Country(
+        area: '欧州',
+        name: 'アイルランド',
+        englishName: 'Ireland',
+        capitalCity: 'ダブリン',
+        imageName: 'ireland',
+        language: 'アイルランド語（ゲール語）、英語',
+        currency: 'ユーロ'),
+    const Country(
+        area: '欧州',
+        name: 'アゼルバイジャン共和国',
+        englishName: 'Republic of Azerbaijan',
+        capitalCity: 'バクー',
+        imageName: 'republic_of_azerbaijan',
+        language: 'アゼルバイジャン語（公用語）',
+        currency: 'マナト'),
+    const Country(
+        area: '中東',
+        name: 'アフガニスタン・イスラム共和国',
+        englishName: 'Islamic Republic of Afghanistan',
+        capitalCity: 'カブール',
+        imageName: 'islamic_republic_of_afghanistan',
+        language: 'ダリー語、パシュトー語（ともに公用語）',
+        currency: 'アフガニー'),
+    const Country(
+        area: '北米',
+        name: 'アメリカ合衆国',
+        englishName: 'United States of America',
+        capitalCity: 'ワシントンD.C.',
+        imageName: 'united_states_of_america',
+        language: '英語',
+        currency: '米ドル'),
+    const Country(
+        area: '中東',
+        name: 'アラブ首長国連邦',
+        englishName: 'United Arab Emirates: UAE',
+        capitalCity: 'アブダビ',
+        imageName: 'united_arab_emirates:_uae',
+        language: 'アラビア語',
+        currency: 'ディルハム'),
+    const Country(
+        area: 'アフリカ',
+        name: 'アルジェリア民主人民共和国',
+        englishName: 'People’s Democratic Republic of Algeria',
+        capitalCity: 'アルジェ',
+        imageName: 'people_s_democratic_republic_of_algeria',
+        language: 'アラビア語、ベルベル語（ともに国語、公用語）、フランス語（国民の間で広く用いられている）',
+        currency: 'アルジェリアン・ディナール'),
+    const Country(
+        area: '中南米',
+        name: 'アルゼンチン共和国',
+        englishName: 'Argentine Republic',
+        capitalCity: 'ブエノスアイレス',
+        imageName: 'argentine_republic',
+        language: 'スペイン語',
+        currency: 'ペソ'),
+    const Country(
+        area: '欧州',
+        name: 'アルバニア共和国',
+        englishName: 'Republic of Albania',
+        capitalCity: 'ティラナ',
+        imageName: 'republic_of_albania',
+        language: 'アルバニア語',
+        currency: 'レク'),
+    const Country(
+        area: '欧州',
+        name: 'アルメニア共和国',
+        englishName: 'Republic of Armenia',
+        capitalCity: 'エレバン',
+        imageName: 'republic_of_armenia',
+        language: 'アルメニア語（公用語）',
+        currency: 'ドラム'),
+    const Country(
+        area: 'アフリカ',
+        name: 'アンゴラ共和国',
+        englishName: 'Republic of Angola',
+        capitalCity: 'ルアンダ',
+        imageName: 'republic_of_angola',
+        language: 'ポルトガル語（公用語）、その他ウンブンドゥ語など',
+        currency: 'クワンザ'),
+    const Country(
+        area: '中南米',
+        name: 'アンティグア・バーブーダ',
+        englishName: 'Antigua and Barbuda',
+        capitalCity: 'セントジョンズ',
+        imageName: 'antigua_and_barbuda',
+        language: '英語（公用語）、アンティグア・クレオール語',
+        currency: '東カリブ・ドル'),
+    const Country(
+        area: '欧州',
+        name: 'アンドラ公国',
+        englishName: 'Principality of Andorra',
+        capitalCity: 'アンドラ・ラ・ベリャ',
+        imageName: 'principality_of_andorra',
+        language: 'カタルーニャ語（公用語）、スペイン語、ポルトガル語、フランス語',
+        currency: 'ユーロ'),
+    const Country(
+        area: '中東',
+        name: 'イエメン共和国',
+        englishName: 'Republic of Yemen',
+        capitalCity: 'サヌア',
+        imageName: 'republic_of_yemen',
+        language: 'アラビア語',
+        currency: 'イエメン・リアル'),
+    const Country(
+        area: '中東',
+        name: 'イスラエル国',
+        englishName: 'State of Israel',
+        capitalCity: 'テルアビブ',
+        imageName: 'state_of_israel',
+        language: 'ヘブライ語（公用語）、アラビア語',
+        currency: '新シェケル'),
+    const Country(
+        area: '欧州',
+        name: 'イタリア共和国',
+        englishName: 'Italian Republic',
+        capitalCity: 'ローマ',
+        imageName: 'italian_republic',
+        language: 'イタリア語',
+        currency: 'ユーロ'),
+    const Country(
+        area: '中東',
+        name: 'イラク共和国',
+        englishName: 'Republic of Iraq',
+        capitalCity: 'バグダッド',
+        imageName: 'republic_of_iraq',
+        language: 'アラビア語、クルド語（ともに公用語）など',
+        currency: 'イラク・ディナール'),
+    const Country(
+        area: '中東',
+        name: 'イラン・イスラム共和国',
+        englishName: 'Islamic Republic of Iran',
+        capitalCity: 'テヘラン',
+        imageName: 'islamic_republic_of_iran',
+        language: 'ペルシャ語、トルコ語、クルド語など',
+        currency: 'リアル'),
+    const Country(
+        area: 'アジア',
+        name: 'インド共和国',
+        englishName: 'Republic of India',
+        capitalCity: 'ニューデリー',
+        imageName: 'republic_of_india',
+        language: 'ヒンディー語(連邦公用語）、憲法公認言語21言語など',
+        currency: 'ルピー'),
+    const Country(
+        area: 'アジア',
+        name: 'インドネシア共和国',
+        englishName: 'Republic of Indonesia',
+        capitalCity: 'ジャカルタ',
+        imageName: 'republic_of_indonesia',
+        language: 'インドネシア語',
+        currency: 'ルピア'),
+    const Country(
+        area: 'アフリカ',
+        name: 'ウガンダ共和国',
+        englishName: 'Republic of Uganda',
+        capitalCity: 'カンパラ',
+        imageName: 'republic_of_uganda',
+        language: '英語、スワヒリ語、ルガンダ語',
+        currency: 'ウガンダ・シリング'),
+    const Country(
+        area: '欧州',
+        name: 'ウクライナ',
+        englishName: 'Ukraine',
+        capitalCity: 'キーウ',
+        imageName: 'ukraine',
+        language: 'ウクライナ語（国家語）。ロシア語も使われている。',
+        currency: 'フリヴニャ'),
+    const Country(
+        area: '欧州',
+        name: 'ウズベキスタン共和国',
+        englishName: 'Republic of Uzbekistan',
+        capitalCity: 'タシケント',
+        imageName: 'republic_of_uzbekistan',
+        language: 'ウズベク語（国家語）、ロシア語',
+        currency: 'スム'),
+    const Country(
+        area: '中南米',
+        name: 'ウルグアイ東方共和国',
+        englishName: 'Oriental Republic of Uruguay',
+        capitalCity: 'モンテビデオ',
+        imageName: 'oriental_republic_of_uruguay',
+        language: 'スペイン語',
+        currency: 'ペソ'),
+    const Country(
+        area: '欧州',
+        name: '英国（グレートブリテン及び北アイルランド連合王国）',
+        englishName: 'United Kingdom of Great Britain and Northern Ireland',
+        capitalCity: 'ロンドン',
+        imageName: 'united_kingdom_of_great_britain_and_northern_ireland',
+        language: '英語（ウェールズ語、ゲール語等使用地域あり）',
+        currency: 'スターリング・ポンド'),
+    const Country(
+        area: '中南米',
+        name: 'エクアドル共和国',
+        englishName: 'Republic of Ecuador',
+        capitalCity: 'キト',
+        imageName: 'republic_of_ecuador',
+        language: 'スペイン語（ケチュア語、シュアール語など）',
+        currency: '米ドル'),
+    const Country(
+        area: 'アフリカ',
+        name: 'エジプト・アラブ共和国',
+        englishName: 'Arab Republic of Egypt',
+        capitalCity: 'カイロ',
+        imageName: 'arab_republic_of_egypt',
+        language: 'アラビア語、都市部では英語も通用',
+        currency: 'エジプト・ポンド'),
+    const Country(
+        area: '欧州',
+        name: 'エストニア共和国',
+        englishName: 'Republic of Estonia',
+        capitalCity: 'タリン',
+        imageName: 'republic_of_estonia',
+        language: 'エストニア語',
+        currency: 'ユーロ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'エスワティニ王国',
+        englishName: 'Kingdom of Eswatini',
+        capitalCity: 'ムババーネ',
+        imageName: 'kingdom_of_eswatini',
+        language: '英語、スワティ語',
+        currency: 'リランゲーニ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'エチオピア連邦民主共和国',
+        englishName: 'Federal Democratic Republic of Ethiopia',
+        capitalCity: 'アディスアベバ',
+        imageName: 'federal_democratic_republic_of_ethiopia',
+        language: 'アムハラ語、オロモ語、英語など',
+        currency: 'ブル'),
+    const Country(
+        area: 'アフリカ',
+        name: 'エリトリア国',
+        englishName: 'State of Eritrea',
+        capitalCity: 'アスマラ',
+        imageName: 'state_of_eritrea',
+        language: 'ティグリニャ語、アラビア語、諸民族語',
+        currency: 'ナクファ'),
+    const Country(
+        area: '中南米',
+        name: 'エルサルバドル共和国',
+        englishName: 'Republic of El Salvador',
+        capitalCity: 'サンサルバドル',
+        imageName: 'republic_of_el_salvador',
+        language: 'スペイン語',
+        currency: '米ドル'),
+    const Country(
+        area: '大洋州',
+        name: 'オーストラリア連邦',
+        englishName: 'Commonwealth of Australia',
+        capitalCity: 'キャンベラ',
+        imageName: 'commonwealth_of_australia',
+        language: '英語',
+        currency: 'オーストラリア・ドル'),
+    const Country(
+        area: '欧州',
+        name: 'オーストリア共和国',
+        englishName: 'Republic of Austria',
+        capitalCity: 'ウィーン',
+        imageName: 'republic_of_austria',
+        language: 'ドイツ語',
+        currency: 'ユーロ'),
+    const Country(
+        area: '中東',
+        name: 'オマーン国',
+        englishName: 'Sultanate of Oman',
+        capitalCity: 'マスカット',
+        imageName: 'sultanate_of_oman',
+        language: 'アラビア語（公用語）、英語も広く通用',
+        currency: 'オマーン・リアル'),
+    const Country(
+        area: '欧州',
+        name: 'オランダ王国',
+        englishName: 'Kingdom of the Netherlands',
+        capitalCity: 'アムステルダム',
+        imageName: 'kingdom_of_the_netherlands',
+        language: 'オランダ語',
+        currency: 'ユーロ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'ガーナ共和国',
+        englishName: 'Republic of Ghana',
+        capitalCity: 'アクラ',
+        imageName: 'republic_of_ghana',
+        language: '英語（公用語）、各民族語',
+        currency: 'ガーナセディ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'カーボベルデ共和国',
+        englishName: 'Republic of Cabo Verde',
+        capitalCity: 'プライア',
+        imageName: 'republic_of_cabo_verde',
+        language: 'ポルトガル語（公用語）、クレオール語',
+        currency: 'カーボベルデ・エスクード'),
+    const Country(
+        area: '中南米',
+        name: 'ガイアナ協同共和国',
+        englishName: 'Co-operative Republic of Guyana',
+        capitalCity: 'ジョージタウン',
+        imageName: 'co-operative_republic_of_guyana',
+        language: '英語（公用語）、ガイアナ・クレオール語など',
+        currency: 'ガイアナ・ドル'),
+    const Country(
+        area: '欧州',
+        name: 'カザフスタン共和国',
+        englishName: 'Republic of Kazakhstan',
+        capitalCity: 'アスタナ',
+        imageName: 'republic_of_kazakhstan',
+        language: 'カザフ語（国語）、ロシア語（公用語）',
+        currency: 'テンゲ'),
+    const Country(
+        area: '中東',
+        name: 'カタール国',
+        englishName: 'State of Qatar',
+        capitalCity: 'ドーハ',
+        imageName: 'state_of_qatar',
+        language: 'アラビア語',
+        currency: 'カタール・リヤル'),
+    const Country(
+        area: '北米',
+        name: 'カナダ',
+        englishName: 'Canada',
+        capitalCity: 'オタワ',
+        imageName: 'canada',
+        language: '英語、フランス語（ともに公用語）',
+        currency: 'カナダ・ドル'),
+    const Country(
+        area: 'アフリカ',
+        name: 'ガボン共和国',
+        englishName: 'Gabonese Republic',
+        capitalCity: 'リーブルビル',
+        imageName: 'gabonese_republic',
+        language: 'フランス語（公用語）',
+        currency: 'CFAフラン'),
+    const Country(
+        area: 'アフリカ',
+        name: 'カメルーン共和国',
+        englishName: 'Republic of Cameroon',
+        capitalCity: 'ヤウンデ',
+        imageName: 'republic_of_cameroon',
+        language: 'フランス語、英語（ともにに公用語）、その他各部族語',
+        currency: 'CFAフラン'),
+    const Country(
+        area: 'アフリカ',
+        name: 'ガンビア共和国',
+        englishName: 'Republic of The Gambia',
+        capitalCity: 'バンジュール',
+        imageName: 'republic_of_the_gambia',
+        language: '英語（公用語）、マンディンゴ語、ウォロフ語、フラ語など',
+        currency: 'ダラシ'),
+    const Country(
+        area: 'アジア',
+        name: 'カンボジア王国',
+        englishName: 'Kingdom of Cambodia',
+        capitalCity: 'プノンペン',
+        imageName: 'kingdom_of_cambodia',
+        language: 'クメール語',
+        currency: 'リエル'),
+    const Country(
+        area: '欧州',
+        name: '北マケドニア共和国',
+        englishName: 'Republic of North Macedonia',
+        capitalCity: 'スコピエ',
+        imageName: 'republic_of_north_macedonia',
+        language: 'マケドニア語、アルバニア語',
+        currency: 'マケドニア・デナル'),
+    const Country(
+        area: 'アフリカ',
+        name: 'ギニア共和国',
+        englishName: 'Republic of Guinea',
+        capitalCity: 'コナクリ',
+        imageName: 'republic_of_guinea',
+        language: 'フランス語、各民族語（ブル、マリンケ、スースーなど）',
+        currency: 'ギニア・フラン'),
+    const Country(
+        area: 'アフリカ',
+        name: 'ギニアビサウ共和国',
+        englishName: 'Republic of Guinea-Bissau',
+        capitalCity: 'ビサウ',
+        imageName: 'republic_of_guinea-bissau',
+        language: 'ポルトガル語（公用語）',
+        currency: 'CFAフラン'),
+    const Country(
+        area: '欧州',
+        name: 'キプロス共和国',
+        englishName: 'Republic of Cyprus',
+        capitalCity: 'ニコシア',
+        imageName: 'republic_of_cyprus',
+        language: 'ギリシャ語、トルコ語（ともに公用語。この他、英語が広く用いられている。）',
+        currency: 'ユーロ'),
+    const Country(
+        area: '中南米',
+        name: 'キューバ共和国',
+        englishName: 'Republic of Cuba',
+        capitalCity: 'ハバナ',
+        imageName: 'republic_of_cuba',
+        language: 'スペイン語',
+        currency: 'キューバ・ペソ'),
+    const Country(
+        area: '欧州',
+        name: 'ギリシャ共和国',
+        englishName: 'Hellenic Republic',
+        capitalCity: 'アテネ',
+        imageName: 'hellenic_republic',
+        language: '現代ギリシャ語',
+        currency: 'ユーロ'),
+    const Country(
+        area: '大洋州',
+        name: 'キリバス共和国',
+        englishName: 'Republic of Kiribati',
+        capitalCity: 'タラワ',
+        imageName: 'republic_of_kiribati',
+        language: 'キリバス語、英語（ともに公用語）',
+        currency: 'オーストラリア・ドル'),
+    const Country(
+        area: '欧州',
+        name: 'キルギス共和国',
+        englishName: 'Kyrgyz Republic',
+        capitalCity: 'ビシュケク',
+        imageName: 'kyrgyz_republic',
+        language: 'キルギス語（国語）、ロシア語（公用語）',
+        currency: 'ソム'),
+    const Country(
+        area: '中南米',
+        name: 'グアテマラ共和国',
+        englishName: 'Republic of Guatemala',
+        capitalCity: 'グアテマラ市',
+        imageName: 'republic_of_guatemala',
+        language: 'スペイン語（公用語）、その他に２２のマヤ系言語など',
+        currency: 'ケツァル'),
+    const Country(
+        area: '中東',
+        name: 'クウェート国',
+        englishName: 'State of Kuwait',
+        capitalCity: 'クウェート',
+        imageName: 'state_of_kuwait',
+        language: 'アラビア語',
+        currency: 'クウェート・ディナール'),
+    const Country(
+        area: '大洋州',
+        name: 'クック諸島',
+        englishName: 'Cook Islands',
+        capitalCity: 'アバルア（ラロトンガ島）',
+        imageName: 'cook_islands',
+        language: 'クック諸島マオリ語、英語（ともに公用語）',
+        currency: 'ニュージーランド・ドル'),
+    const Country(
+        area: '中南米',
+        name: 'グレナダ',
+        englishName: 'Grenada',
+        capitalCity: 'セントジョージズ',
+        imageName: 'grenada',
+        language: '英語（公用語）、グレナダ・クレオール語',
+        currency: '東カリブ・ドル'),
+    const Country(
+        area: '欧州',
+        name: 'クロアチア共和国',
+        englishName: 'Republic of Croatia',
+        capitalCity: 'ザグレブ',
+        imageName: 'republic_of_croatia',
+        language: 'クロアチア語（公用語）',
+        currency: 'ユーロ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'ケニア共和国',
+        englishName: 'Republic of Kenya',
+        capitalCity: 'ナイロビ',
+        imageName: 'republic_of_kenya',
+        language: 'スワヒリ語、英語',
+        currency: 'ケニア・シリング'),
+    const Country(
+        area: 'アフリカ',
+        name: 'コートジボワール共和国',
+        englishName: 'Republic of Cote d’Ivoire',
+        capitalCity: 'ヤムスクロ',
+        imageName: 'republic_of_cote_divoire',
+        language: 'フランス語（公用語）、各民族語',
+        currency: 'CFAフラン'),
+    const Country(
+        area: '中南米',
+        name: 'コスタリカ共和国',
+        englishName: 'Republic of Costa Rica',
+        capitalCity: 'サンホセ',
+        imageName: 'republic_of_costa_rica',
+        language: 'スペイン語',
+        currency: 'コロン'),
+    const Country(
+        area: '欧州',
+        name: 'コソボ共和国',
+        englishName: 'Republic of Kosovo',
+        capitalCity: 'プリシュティナ',
+        imageName: 'republic_of_kosovo',
+        language: 'アルバニア語（アルバニア人）、セルビア語（セルビア人）など',
+        currency: 'ユーロ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'コモロ連合',
+        englishName: 'Union of Comoros',
+        capitalCity: 'モロニ',
+        imageName: 'union_of_comoros',
+        language: 'フランス語、アラビア語、コモロ語（いずれも公用語）',
+        currency: 'コモロ・フラン'),
+    const Country(
+        area: '中南米',
+        name: 'コロンビア共和国',
+        englishName: 'Republic of Colombia',
+        capitalCity: 'ボゴタ',
+        imageName: 'republic_of_colombia',
+        language: 'スペイン語',
+        currency: 'ペソ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'コンゴ共和国',
+        englishName: 'Republic of Congo',
+        capitalCity: 'ブラザビル',
+        imageName: 'republic_of_congo',
+        language: 'フランス語（公用語）、リンガラ語、キトゥバ語',
+        currency: 'CFAフラン'),
+    const Country(
+        area: 'アフリカ',
+        name: 'コンゴ民主共和国',
+        englishName: 'Democratic Republic of the Congo',
+        capitalCity: 'キンシャサ',
+        imageName: 'democratic_republic_of_the_congo',
+        language: 'フランス語（公用語）、スワヒリ語、リンガラ語、チルバ語、キコンゴ語など',
+        currency: 'コンゴ・フラン'),
+    const Country(
+        area: '中東',
+        name: 'サウジアラビア王国',
+        englishName: 'Kingdom of Saudi Arabia',
+        capitalCity: 'リヤド',
+        imageName: 'kingdom_of_saudi_arabia',
+        language: 'アラビア語（公用語）',
+        currency: 'サウジアラビア・リヤル'),
+    const Country(
+        area: '大洋州',
+        name: 'サモア独立国',
+        englishName: 'Independent State of Samoa',
+        capitalCity: 'アピア',
+        imageName: 'independent_state_of_samoa',
+        language: 'サモア語、英語（ともに公用語）',
+        currency: 'サモア・タラ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'サントメ・プリンシペ民主共和国',
+        englishName: 'Democratic Republic of Sao Tome and Principe',
+        capitalCity: 'サントメ',
+        imageName: 'democratic_republic_of_sao_tome_and_principe',
+        language: 'ポルトガル語',
+        currency: 'ドブラ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'ザンビア共和国',
+        englishName: 'Republic of Zambia',
+        capitalCity: 'ルサカ',
+        imageName: 'republic_of_zambia',
+        language: '英語（公用語）、ベンバ語、ニャンジァ語、トンガ語',
+        currency: 'ザンビア・クワチャ'),
+    const Country(
+        area: '欧州',
+        name: 'サンマリノ共和国',
+        englishName: 'Republic of San Marino',
+        capitalCity: 'サンマリノ',
+        imageName: 'republic_of_san_marino',
+        language: 'イタリア語',
+        currency: 'ユーロ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'シエラレオネ共和国',
+        englishName: 'Republic of Sierra Leone',
+        capitalCity: 'フリータウン',
+        imageName: 'republic_of_sierra_leone',
+        language: '英語（公用語）、クリオ語、メンデ語、テムネ語など',
+        currency: 'レオン'),
+    const Country(
+        area: 'アフリカ',
+        name: 'ジブチ共和国',
+        englishName: 'Republic of Djibouti',
+        capitalCity: 'ジブチ',
+        imageName: 'republic_of_djibouti',
+        language: 'アラビア語、フランス語',
+        currency: 'ジブチ・フラン'),
+    const Country(
+        area: '中南米',
+        name: 'ジャマイカ',
+        englishName: 'Jamaica',
+        capitalCity: 'キングストン',
+        imageName: 'jamaica',
+        language: '英語（公用語）、ジャマイカ・クレオール語',
+        currency: 'ジャマイカ・ドル'),
+    const Country(
+        area: '欧州',
+        name: 'ジョージア',
+        englishName: 'Georgia',
+        capitalCity: 'トビリシ',
+        imageName: 'georgia',
+        language: 'ジョージア語（公用語）',
+        currency: 'ラリ'),
+    const Country(
+        area: '中東',
+        name: 'シリア・アラブ共和国',
+        englishName: 'Syrian Arab Republic',
+        capitalCity: 'ダマスカス',
+        imageName: 'syrian_arab_republic',
+        language: 'アラビア語',
+        currency: 'シリア・ポンド'),
+    const Country(
+        area: 'アジア',
+        name: 'シンガポール共和国',
+        englishName: 'Republic of Singapore',
+        capitalCity: 'なし',
+        imageName: 'republic_of_singapore',
+        language: 'マレー語（国語）、英語、中国語、マレー語、タミール語（ともに公用語）',
+        currency: 'シンガポール・ドル'),
+    const Country(
+        area: 'アフリカ',
+        name: 'ジンバブエ共和国',
+        englishName: 'Republic of Zimbabwe',
+        capitalCity: 'ハラレ',
+        imageName: 'republic_of_zimbabwe',
+        language: '英語、ショナ語、ンデベレ語',
+        currency: 'ジンバブエ・ドル'),
+    const Country(
+        area: '欧州',
+        name: 'スイス連邦',
+        englishName: 'Swiss Confederation',
+        capitalCity: 'ベルン',
+        imageName: 'swiss_confederation',
+        language: 'ドイツ語、フランス語、イタリア語、ロマンシュ語',
+        currency: 'スイス・フラン'),
+    const Country(
+        area: '欧州',
+        name: 'スウェーデン王国',
+        englishName: 'Kingdom of Sweden',
+        capitalCity: 'ストックホルム',
+        imageName: 'kingdom_of_sweden',
+        language: 'スウェーデン語',
+        currency: 'スウェーデン・クローナ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'スーダン共和国',
+        englishName: 'The Republic of the Sudan',
+        capitalCity: 'ハルツーム',
+        imageName: 'the_republic_of_the_sudan',
+        language: 'アラビア語（公用語）、英語も使用、その他、部族語多数',
+        currency: 'スーダン・ポンド'),
+    const Country(
+        area: '欧州',
+        name: 'スペイン王国',
+        englishName: 'Kingdom of Spain',
+        capitalCity: 'マドリード',
+        imageName: 'kingdom_of_spain',
+        language: 'スペイン語',
+        currency: 'ユーロ'),
+    const Country(
+        area: '中南米',
+        name: 'スリナム共和国',
+        englishName: 'Republic of Suriname',
+        capitalCity: 'パラマリボ',
+        imageName: 'republic_of_suriname',
+        language: 'オランダ語（公用語）、英語、スリナム語など',
+        currency: 'スリナム・ドル'),
+    const Country(
+        area: 'アジア',
+        name: 'スリランカ民主社会主義共和国',
+        englishName: 'Democratic Socialist Republic of Sri Lanka',
+        capitalCity: 'スリ・ジャヤワルダナプラ・コッテ',
+        imageName: 'democratic_socialist_republic_of_sri_lanka',
+        language: 'シンハラ語、タミル語（ともに公用語）、英語（連結語）',
+        currency: 'ルピー'),
+    const Country(
+        area: '欧州',
+        name: 'スロバキア共和国',
+        englishName: 'Slovak Republic',
+        capitalCity: 'ブラチスラバ',
+        imageName: 'slovak_republic',
+        language: 'スロバキア語',
+        currency: 'ユーロ'),
+    const Country(
+        area: '欧州',
+        name: 'スロベニア共和国',
+        englishName: 'Republic of Slovenia',
+        capitalCity: 'リュブリャナ',
+        imageName: 'republic_of_slovenia',
+        language: 'スロベニア語',
+        currency: 'ユーロ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'セーシェル共和国',
+        englishName: 'Republic of Seychelles',
+        capitalCity: 'ヴィクトリア',
+        imageName: 'republic_of_seychelles',
+        language: '英語、フランス語、クレオール語',
+        currency: 'セーシェル・ルピー'),
+    const Country(
+        area: 'アフリカ',
+        name: '赤道ギニア共和国',
+        englishName: 'Republic of Equatorial Guinea',
+        capitalCity: 'マラボ',
+        imageName: 'republic_of_equatorial_guinea',
+        language: 'スペイン語（公用語）、フランス語（第2公用語）、ポルトガル語（第3公用語）、ファン語、ブビ語',
+        currency: 'CFAフラン'),
+    const Country(
+        area: 'アフリカ',
+        name: 'セネガル共和国',
+        englishName: 'Republic of Senegal',
+        capitalCity: 'ダカール',
+        imageName: 'republic_of_senegal',
+        language: 'フランス語（公用語）、ウォロフ語など各民族語',
+        currency: 'CFAフラン'),
+    const Country(
+        area: '欧州',
+        name: 'セルビア共和国',
+        englishName: 'Republic of Serbia',
+        capitalCity: 'ベオグラード',
+        imageName: 'republic_of_serbia',
+        language: 'セルビア語（公用語）、ハンガリー語など',
+        currency: 'ディナール'),
+    const Country(
+        area: '中南米',
+        name: 'セントクリストファー・ネービス',
+        englishName: 'Saint Christopher and Nevis',
+        capitalCity: 'バセテール',
+        imageName: 'saint_christopher_and_nevis',
+        language: '英語（公用語）',
+        currency: '東カリブ・ドル'),
+    const Country(
+        area: '中南米',
+        name: 'セントビンセント及びグレナディーン諸島',
+        englishName: 'Saint Vincent and the Grenadines',
+        capitalCity: 'キングスタウン',
+        imageName: 'saint_vincent_and_the_grenadines',
+        language: '英語（公用語）、セントビンセント・クレオール語',
+        currency: '東カリブ・ドル'),
+    const Country(
+        area: '中南米',
+        name: 'セントルシア',
+        englishName: 'Saint Lucia',
+        capitalCity: 'カストリーズ',
+        imageName: 'saint_lucia',
+        language: '英語（公用語）、セントルシア・クレオール語',
+        currency: '東カリブ・ドル'),
+    const Country(
+        area: 'アフリカ',
+        name: 'ソマリア連邦共和国',
+        englishName: 'Federal Republic of Somalia',
+        capitalCity: 'モガディシュ',
+        imageName: 'federal_republic_of_somalia',
+        language: 'ソマリ語（公用語）、アラビア語（第2公用語）',
+        currency: 'ソマリア・シリング'),
+    const Country(
+        area: '大洋州',
+        name: 'ソロモン諸島',
+        englishName: 'Solomon Islands',
+        capitalCity: 'ホニアラ',
+        imageName: 'solomon_islands',
+        language: '英語（公用語）、ピジン英語（共通語）',
+        currency: 'ソロモン・ドル'),
+    const Country(
+        area: 'アジア',
+        name: 'タイ王国',
+        englishName: 'Kingdom of Thailand',
+        capitalCity: 'バンコク',
+        imageName: 'kingdom_of_thailand',
+        language: 'タイ語',
+        currency: 'バーツ'),
+    const Country(
+        area: 'アジア',
+        name: '大韓民国',
+        englishName: 'Republic of Korea',
+        capitalCity: 'ソウル',
+        imageName: 'republic_of_korea',
+        language: '韓国語',
+        currency: 'ウォン'),
+    const Country(
+        area: '欧州',
+        name: 'タジキスタン共和国',
+        englishName: 'Republic of Tajikistan',
+        capitalCity: 'ドゥシャンベ',
+        imageName: 'republic_of_tajikistan',
+        language: 'タジク語（公用語）、ロシア語も広く使われている',
+        currency: 'ソモニ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'タンザニア連合共和国',
+        englishName: 'United Republic of Tanzania',
+        capitalCity: 'ドドマ',
+        imageName: 'united_republic_of_tanzania',
+        language: 'スワヒリ語（国語）、英語（公用語）',
+        currency: 'タンザニア・シリング'),
+    const Country(
+        area: '欧州',
+        name: 'チェコ共和国',
+        englishName: 'Czech Republic',
+        capitalCity: 'プラハ',
+        imageName: 'czech_republic',
+        language: 'チェコ語',
+        currency: 'チェコ・コルナ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'チャド共和国',
+        englishName: 'Republic of Chad',
+        capitalCity: 'ウンジャメナ',
+        imageName: 'republic_of_chad',
+        language: 'フランス語、アラビア語（ともに公用語）、部族語130以上',
+        currency: 'CFAフラン'),
+    const Country(
+        area: 'アフリカ',
+        name: '中央アフリカ共和国',
+        englishName: 'Central African Republic',
+        capitalCity: 'バンギ',
+        imageName: 'central_african_republic',
+        language: 'フランス語（公用語）、サンゴ語（公用語、国語）、部族語',
+        currency: 'CFAフラン'),
+    const Country(
+        area: 'アジア',
+        name: '中華人民共和国',
+        englishName: 'People’s Republic of China',
+        capitalCity: '北京',
+        imageName: 'peoples_republic_of_china',
+        language: '中国語',
+        currency: '人民元'),
+    const Country(
+        area: 'アフリカ',
+        name: 'チュニジア共和国',
+        englishName: 'Republic of Tunisia',
+        capitalCity: 'チュニス',
+        imageName: 'republic_of_tunisia',
+        language: 'アラビア語（公用語）、フランス語（国民の間で広く用いられている）',
+        currency: 'チュニジア・ディナール'),
+    const Country(
+        area: '中南米',
+        name: 'チリ共和国',
+        englishName: 'Republic of Chile',
+        capitalCity: 'サンティアゴ',
+        imageName: 'republic_of_chile',
+        language: 'スペイン語',
+        currency: 'ペソ'),
+    const Country(
+        area: '大洋州',
+        name: 'ツバル',
+        englishName: 'Tuvalu',
+        capitalCity: 'フナフティ',
+        imageName: 'tuvalu',
+        language: '英語、ツバル語',
+        currency: 'オーストラリア・ドル'),
+    const Country(
+        area: '欧州',
+        name: 'デンマーク王国',
+        englishName: 'Kingdom of Denmark',
+        capitalCity: 'コペンハーゲン',
+        imageName: 'kingdom_of_denmark',
+        language: 'デンマーク語',
+        currency: 'デンマーク・クローネ'),
+    const Country(
+        area: '欧州',
+        name: 'ドイツ連邦共和国',
+        englishName: 'Federal Republic of Germany',
+        capitalCity: 'ベルリン',
+        imageName: 'federal_republic_of_germany',
+        language: 'ドイツ語',
+        currency: 'ユーロ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'トーゴ共和国',
+        englishName: 'Republic of Togo',
+        capitalCity: 'ロメ',
+        imageName: 'republic_of_togo',
+        language: 'フランス語（公用語）、エヴェ語、カビエ語など',
+        currency: 'CFAフラン（注３）'),
+    const Country(
+        area: '中南米',
+        name: 'ドミニカ国',
+        englishName: 'Commonwealth of Dominica',
+        capitalCity: 'ロゾー',
+        imageName: 'commonwealth_of_dominica',
+        language: '英語（公用語）、フランス語系パトワ語',
+        currency: '東カリブ・ドル'),
+    const Country(
+        area: '中南米',
+        name: 'ドミニカ共和国',
+        englishName: 'Dominican Republic',
+        capitalCity: 'サントドミンゴ',
+        imageName: 'dominican_republic',
+        language: 'スペイン語',
+        currency: 'ドミニカ・ペソ'),
+    const Country(
+        area: '中南米',
+        name: 'トリニダード・トバゴ共和国',
+        englishName: 'Republic of Trinidad and Tobago',
+        capitalCity: 'ポート・オブ・スペイン',
+        imageName: 'republic_of_trinidad_and_tobago',
+        language: '英語（公用語）、ヒンディー語、フランス語、スペイン語、トリニダード・クレオール語など',
+        currency: 'トリニダード・トバゴ・ドル'),
+    const Country(
+        area: '欧州',
+        name: 'トルクメニスタン',
+        englishName: 'Turkmenistan',
+        capitalCity: 'アシガバット',
+        imageName: 'turkmenistan',
+        language: 'トルクメン語（公用語）、ロシア語も広く使われている',
+        currency: 'マナト'),
+    const Country(
+        area: '中東',
+        name: 'トルコ共和国',
+        englishName: 'Republic of Türkiye',
+        capitalCity: 'アンカラ',
+        imageName: 'republic_of_türkiye',
+        language: 'トルコ語（公用語）',
+        currency: 'トルコ・リラ'),
+    const Country(
+        area: '大洋州',
+        name: 'トンガ王国',
+        englishName: 'Kingdom of Tonga',
+        capitalCity: 'ヌクアロファ',
+        imageName: 'kingdom_of_tonga',
+        language: 'トンガ語、英語（ともに公用語）',
+        currency: 'パアンガ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'ナイジェリア連邦共和国',
+        englishName: 'Federal Republic of Nigeria',
+        capitalCity: 'アブジャ',
+        imageName: 'federal_republic_of_nigeria',
+        language: '英語（公用語）、各民族語（ハウサ語、ヨルバ語、イボ語など）',
+        currency: 'ナイラ'),
+    const Country(
+        area: '大洋州',
+        name: 'ナウル共和国',
+        englishName: 'Republic of Nauru',
+        capitalCity: 'ヤレン',
+        imageName: 'republic_of_nauru',
+        language: '英語（公用語）、ナウル語',
+        currency: 'オーストラリア・ドル'),
+    const Country(
+        area: 'アフリカ',
+        name: 'ナミビア共和国',
+        englishName: 'Republic of Namibia',
+        capitalCity: 'ウィントフック',
+        imageName: 'republic_of_namibia',
+        language: '英語（公用語）、アフリカーンス語、ドイツ語、その他部族語',
+        currency: 'ナミビア・ドル'),
+    const Country(
+        area: '大洋州',
+        name: 'ニウエ',
+        englishName: 'Niue',
+        capitalCity: 'アロフィ',
+        imageName: 'niue',
+        language: 'ニウエ語（ポリネシア語系）、英語',
+        currency: 'ニュージーランド・ドル'),
+    const Country(
+        area: '中南米',
+        name: 'ニカラグア共和国',
+        englishName: 'Republic of Nicaragua',
+        capitalCity: 'マナグア',
+        imageName: 'republic_of_nicaragua',
+        language: 'スペイン語',
+        currency: 'コルドバ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'ニジェール共和国',
+        englishName: 'Republic of Niger',
+        capitalCity: 'ニアメ',
+        imageName: 'republic_of_niger',
+        language: 'フランス語（公用語）、ハウサ語など',
+        currency: 'CFAフラン'),
+    const Country(
+        area: 'アジア',
+        name: '日本',
+        englishName: 'Japan',
+        capitalCity: '東京',
+        imageName: 'japan',
+        language: '日本語',
+        currency: '円'),
+    const Country(
+        area: '大洋州',
+        name: 'ニュージーランド',
+        englishName: 'New Zealand',
+        capitalCity: 'ウェリントン',
+        imageName: 'new_zealand',
+        language: '英語、マオリ語',
+        currency: 'ニュージーランド・ドル'),
+    const Country(
+        area: 'アジア',
+        name: 'ネパール',
+        englishName: 'Nepal',
+        capitalCity: 'カトマンズ',
+        imageName: 'nepal',
+        language: 'ネパール語',
+        currency: 'ネパール・ルピー'),
+    const Country(
+        area: '欧州',
+        name: 'ノルウェー王国',
+        englishName: 'Kingdom of Norway',
+        capitalCity: 'オスロ',
+        imageName: 'kingdom_of_norway',
+        language: 'ノルウェー語、サーミ語',
+        currency: 'ノルウェー・クローネ'),
+    const Country(
+        area: '中東',
+        name: 'バーレーン王国',
+        englishName: 'Kingdom of Bahrain',
+        capitalCity: 'マナーマ市',
+        imageName: 'kingdom_of_bahrain',
+        language: 'アラビア語',
+        currency: 'バーレーン・ディナール'),
+    const Country(
+        area: '中南米',
+        name: 'ハイチ共和国',
+        englishName: 'Republic of Haiti',
+        capitalCity: 'ポルトープランス',
+        imageName: 'republic_of_haiti',
+        language: 'フランス語、ハイチ・クレオール語（ともに公用語）',
+        currency: 'グルド'),
+    const Country(
+        area: 'アジア',
+        name: 'パキスタン・イスラム共和国',
+        englishName: 'Islamic Republic of Pakistan',
+        capitalCity: 'イスラマバード',
+        imageName: 'islamic_republic_of_pakistan',
+        language: 'ウルドゥー語（国語）、英語（公用語）',
+        currency: 'パキスタン・ルピー'),
+    const Country(
+        area: '欧州',
+        name: 'バチカン',
+        englishName: 'Vatican City State',
+        capitalCity: '',
+        imageName: 'vatican_city_state',
+        language: 'ラテン語（公用語）。ただし、外交用にはフランス語、通常業務ではイタリア語を使うことが多い。',
+        currency: 'ユーロ'),
+    const Country(
+        area: '中南米',
+        name: 'パナマ共和国',
+        englishName: 'Republic of Panama',
+        capitalCity: 'パナマシティー',
+        imageName: 'republic_of_panama',
+        language: 'スペイン語',
+        currency: 'バルボア'),
+    const Country(
+        area: '大洋州',
+        name: 'バヌアツ共和国',
+        englishName: 'Republic of Vanuatu',
+        capitalCity: 'ポートビラ',
+        imageName: 'republic_of_vanuatu',
+        language: 'ビスラマ語（ピジン英語）、英語、フランス語（ともに公用語）',
+        currency: 'バツ'),
+    const Country(
+        area: '中南米',
+        name: 'バハマ国',
+        englishName: 'Commonwealth of The Bahamas',
+        capitalCity: 'ナッソー',
+        imageName: 'commonwealth_of_the_bahamas',
+        language: '英語（公用語）',
+        currency: 'バハマ・ドル'),
+    const Country(
+        area: '大洋州',
+        name: 'パプアニューギニア独立国',
+        englishName: 'Independent State of Papua New Guinea',
+        capitalCity: 'ポートモレスビー',
+        imageName: 'independent_state_of_papua_new_guinea',
+        language: '英語（公用語）、ピジン英語、モツ語など',
+        currency: 'キナ及びトヤ'),
+    const Country(
+        area: '大洋州',
+        name: 'パラオ共和国',
+        englishName: 'Republic of Palau',
+        capitalCity: 'マルキョク',
+        imageName: 'republic_of_palau',
+        language: 'パラオ語、英語',
+        currency: '米ドル'),
+    const Country(
+        area: '中南米',
+        name: 'パラグアイ共和国',
+        englishName: 'Republic of Paraguay',
+        capitalCity: 'アスンシオン',
+        imageName: 'republic_of_paraguay',
+        language: 'スペイン語、グアラニー語（ともに公用語）',
+        currency: 'グアラニー'),
+    const Country(
+        area: '中南米',
+        name: 'バルバドス',
+        englishName: 'Barbados',
+        capitalCity: 'ブリッジタウン',
+        imageName: 'barbados',
+        language: '英語（公用語）',
+        currency: 'バルバドス・ドル'),
+    const Country(
+        area: '欧州',
+        name: 'ハンガリー',
+        englishName: 'Hungary',
+        capitalCity: 'ブダペスト',
+        imageName: 'hungary',
+        language: 'ハンガリー語',
+        currency: 'フォリント'),
+    const Country(
+        area: 'アジア',
+        name: 'バングラデシュ人民共和国',
+        englishName: 'People’s Republic of Bangladesh',
+        capitalCity: 'ダッカ',
+        imageName: 'peoples_republic_of_bangladesh',
+        language: 'ベンガル語（国語）',
+        currency: 'タカ'),
+    const Country(
+        area: 'アジア',
+        name: '東ティモール民主共和国',
+        englishName: 'The Democratic Republic of Timor-Leste',
+        capitalCity: 'ディリ',
+        imageName: 'the_democratic_republic_of_timor-leste',
+        language: 'テトゥン語、ポルトガル語（ともに公用語）、インドネシア語、英語（ともに実用語）',
+        currency: '米ドル'),
+    const Country(
+        area: '大洋州',
+        name: 'フィジー共和国',
+        englishName: 'Republic of Fiji',
+        capitalCity: 'スバ',
+        imageName: 'republic_of_fiji',
+        language: '英語（公用語）、フィジー語、ヒンディー語',
+        currency: 'フィジー・ドル'),
+    const Country(
+        area: 'アジア',
+        name: 'フィリピン共和国',
+        englishName: 'Republic of the Philippines',
+        capitalCity: 'マニラ',
+        imageName: 'republic_of_the_philippines',
+        language: 'フィリピノ語（国語）、フィリピノ語、英語（ともに公用語）',
+        currency: 'ペソ'),
+    const Country(
+        area: '欧州',
+        name: 'フィンランド共和国',
+        englishName: 'Republic of Finland',
+        capitalCity: 'ヘルシンキ',
+        imageName: 'republic_of_finland',
+        language: 'フィンランド語、スウェーデン語',
+        currency: 'ユーロ'),
+    const Country(
+        area: 'アジア',
+        name: 'ブータン王国',
+        englishName: 'Kingdom of Bhutan',
+        capitalCity: 'ティンプー',
+        imageName: 'kingdom_of_bhutan',
+        language: 'ゾンカ語（公用語）など',
+        currency: 'ニュルタム'),
+    const Country(
+        area: '中南米',
+        name: 'ブラジル連邦共和国',
+        englishName: 'Federative Republic of Brazil',
+        capitalCity: 'ブラジリア',
+        imageName: 'federative_republic_of_brazil',
+        language: 'ポルトガル語',
+        currency: 'レアル'),
+    const Country(
+        area: '欧州',
+        name: 'フランス共和国',
+        englishName: 'French Republic',
+        capitalCity: 'パリ',
+        imageName: 'french_republic',
+        language: 'フランス語',
+        currency: 'ユーロ'),
+    const Country(
+        area: '欧州',
+        name: 'ブルガリア共和国',
+        englishName: 'Republic of Bulgaria',
+        capitalCity: 'ソフィア',
+        imageName: 'republic_of_bulgaria',
+        language: 'ブルガリア語',
+        currency: 'レフ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'ブルキナファソ',
+        englishName: 'Burkina Faso',
+        capitalCity: 'ワガドゥグ',
+        imageName: 'burkina_faso',
+        language: 'フランス語、モレ語、ディウラ語、グルマンチェ語、プル（フラニ）語など約60言語',
+        currency: 'CFAフラン'),
+    const Country(
+        area: 'アジア',
+        name: 'ブルネイ・ダルサラーム国',
+        englishName: 'Brunei Darussalam',
+        capitalCity: 'バンダル・スリ・ブガワン',
+        imageName: 'brunei_darussalam',
+        language: 'マレー語（公用語）、英語は広く通用し、華人の間では中国語もある程度用いられている。',
+        currency: 'ブルネイ・ドル'),
+    const Country(
+        area: 'アフリカ',
+        name: 'ブルンジ共和国',
+        englishName: 'Republic of Burundi',
+        capitalCity: 'ブジュンブラ',
+        imageName: 'republic_of_burundi',
+        language: 'フランス語、キルンジ語（ともに公用語）',
+        currency: 'ブルンジ・フラン'),
+    const Country(
+        area: 'アジア',
+        name: 'ベトナム社会主義共和国',
+        englishName: 'Socialist Republic of Viet Nam',
+        capitalCity: 'ハノイ',
+        imageName: 'socialist_republic_of_viet_nam',
+        language: 'ベトナム語',
+        currency: 'ドン'),
+    const Country(
+        area: 'アフリカ',
+        name: 'ベナン共和国',
+        englishName: 'Republic of Benin',
+        capitalCity: 'ポルトノボ',
+        imageName: 'republic_of_benin',
+        language: 'フランス語（公用語）',
+        currency: 'CFAフラン'),
+    const Country(
+        area: '中南米',
+        name: 'ベネズエラ・ボリバル共和国',
+        englishName: 'Bolivarian Republic of Venezuela',
+        capitalCity: 'カラカス',
+        imageName: 'bolivarian_republic_of_venezuela',
+        language: 'スペイン語（公用語）、先住民族の諸言語',
+        currency: 'ボリバル'),
+    const Country(
+        area: '欧州',
+        name: 'ベラルーシ共和国',
+        englishName: 'Republic of Belarus',
+        capitalCity: 'ミンスク',
+        imageName: 'republic_of_belarus',
+        language: 'ベラルーシ語、ロシア語（ともに公用語）',
+        currency: 'ベラルーシ・ルーブル'),
+    const Country(
+        area: '中南米',
+        name: 'ベリーズ',
+        englishName: 'Belize',
+        capitalCity: 'ベルモパン',
+        imageName: 'belize',
+        language: '英語（公用語）、スペイン語、ベリーズ・クレオール語、モパン語など',
+        currency: 'ベリーズ・ドル'),
+    const Country(
+        area: '中南米',
+        name: 'ペルー共和国',
+        englishName: 'Republic of Peru',
+        capitalCity: 'リマ',
+        imageName: 'republic_of_peru',
+        language: 'スペイン語（他にケチュア語、アイマラ語など）',
+        currency: 'ソル'),
+    const Country(
+        area: '欧州',
+        name: 'ベルギー王国',
+        englishName: 'Kingdom of Belgium',
+        capitalCity: 'ブリュッセル',
+        imageName: 'kingdom_of_belgium',
+        language: 'オランダ語（フラマン語）、フランス語、ドイツ語',
+        currency: 'ユーロ'),
+    const Country(
+        area: '欧州',
+        name: 'ポーランド共和国',
+        englishName: 'Republic of Poland',
+        capitalCity: 'ワルシャワ',
+        imageName: 'republic_of_poland',
+        language: 'ポーランド語',
+        currency: 'ズロチ'),
+    const Country(
+        area: '欧州',
+        name: 'ボスニア・ヘルツェゴビナ',
+        englishName: 'Bosnia and Herzegovina',
+        capitalCity: 'サラエボ',
+        imageName: 'bosnia_and_herzegovina',
+        language: 'ボスニア語、セルビア語、クロアチア語',
+        currency: '兌換マルク'),
+    const Country(
+        area: 'アフリカ',
+        name: 'ボツワナ共和国',
+        englishName: 'Republic of Botswana',
+        capitalCity: 'ハボローネ',
+        imageName: 'republic_of_botswana',
+        language: '英語、ツワナ語（国語）',
+        currency: 'プラ'),
+    const Country(
+        area: '中南米',
+        name: 'ボリビア多民族国',
+        englishName: 'Plurinational State of Bolivia',
+        capitalCity: 'ラパス',
+        imageName: 'plurinational_state_of_bolivia',
+        language: 'スペイン語及びケチュア語、アイマラ語を中心に先住民言語３６言語',
+        currency: 'ボリビアーノス'),
+    const Country(
+        area: '欧州',
+        name: 'ポルトガル共和国',
+        englishName: 'Portuguese Republic',
+        capitalCity: 'リスボン',
+        imageName: 'portuguese_republic',
+        language: 'ポルトガル語',
+        currency: 'ユーロ'),
+    const Country(
+        area: '中南米',
+        name: 'ホンジュラス共和国',
+        englishName: 'Republic of Honduras',
+        capitalCity: 'テグシガルパ',
+        imageName: 'republic_of_honduras',
+        language: 'スペイン語',
+        currency: 'レンピラ'),
+    const Country(
+        area: '大洋州',
+        name: 'マーシャル諸島共和国',
+        englishName: 'Republic of the Marshall Islands',
+        capitalCity: 'マジュロ',
+        imageName: 'republic_of_the_marshall_islands',
+        language: 'マーシャル語、英語',
+        currency: '米ドル'),
+    const Country(
+        area: 'アフリカ',
+        name: 'マダガスカル共和国',
+        englishName: 'Republic of Madagascar',
+        capitalCity: 'アンタナナリボ',
+        imageName: 'republic_of_madagascar',
+        language: 'マダガスカル語、フランス語（ともに公用語）',
+        currency: 'アリアリ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'マラウイ共和国',
+        englishName: 'Republic of Malawi',
+        capitalCity: 'リロングウェ',
+        imageName: 'republic_of_malawi',
+        language: 'チェワ語、英語（ともに公用語）、各民族語',
+        currency: 'マラウイ・クワチャ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'マリ共和国',
+        englishName: 'Republic of Mali',
+        capitalCity: 'バマコ',
+        imageName: 'republic_of_mali',
+        language: 'フランス語（公用語）、バンバラ語、フルフルデ語、マリンケ語など',
+        currency: 'CFAフラン'),
+    const Country(
+        area: '欧州',
+        name: 'マルタ共和国',
+        englishName: 'Republic of Malta',
+        capitalCity: 'バレッタ',
+        imageName: 'republic_of_malta',
+        language: 'マルタ語、英語（ともに公用語）',
+        currency: 'ユーロ'),
+    const Country(
+        area: 'アジア',
+        name: 'マレーシア',
+        englishName: 'Malaysia',
+        capitalCity: 'クアラルンプール',
+        imageName: 'malaysia',
+        language: 'マレー語（国語）、中国語、タミール語、英語',
+        currency: 'リンギット'),
+    const Country(
+        area: '大洋州',
+        name: 'ミクロネシア連邦',
+        englishName: 'Federated States of Micronesia',
+        capitalCity: 'パリキール',
+        imageName: 'federated_states_of_micronesia',
+        language: '英語、現地の8言語',
+        currency: '米ドル'),
+    const Country(
+        area: 'アフリカ',
+        name: '南アフリカ共和国',
+        englishName: 'Republic of South Africa',
+        capitalCity: 'プレトリア',
+        imageName: 'republic_of_south_africa',
+        language: '英語、アフリカーンス語、バンツー諸語（ズールー語、ソト語ほか）の合計11が公用語',
+        currency: 'ランド'),
+    const Country(
+        area: 'アフリカ',
+        name: '南スーダン共和国',
+        englishName: 'The Republic of South Sudan',
+        capitalCity: 'ジュバ',
+        imageName: 'the_republic_of_south_sudan',
+        language: '英語（公用語）、アラビア語、その他部族語多数',
+        currency: '南スーダン・ポンド'),
+    const Country(
+        area: 'アジア',
+        name: 'ミャンマー連邦共和国',
+        englishName: 'Republic of the Union of Myanmar',
+        capitalCity: 'ネーピードー',
+        imageName: 'republic_of_the_union_of_myanmar',
+        language: 'ミャンマー語（公用語）、シャン語、カレン語など',
+        currency: 'チャット'),
+    const Country(
+        area: '中南米',
+        name: 'メキシコ合衆国',
+        englishName: 'United Mexican States',
+        capitalCity: 'メキシコ市',
+        imageName: 'united_mexican_states',
+        language: 'スペイン語',
+        currency: 'メキシコ・ペソ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'モーリシャス共和国',
+        englishName: 'Republic of Mauritius',
+        capitalCity: 'ポートルイス',
+        imageName: 'republic_of_mauritius',
+        language: '英語（公用語）、フランス語、クレオール語',
+        currency: 'モーリシャス・ルピー'),
+    const Country(
+        area: 'アフリカ',
+        name: 'モーリタニア・イスラム共和国',
+        englishName: 'Islamic Republic of Mauritania',
+        capitalCity: 'ヌアクショット',
+        imageName: 'islamic_republic_of_mauritania',
+        language:
+            'アラビア語（公用語、国語）、プラール語、ソニンケ語、ウォロフ語（いずれも国語）。実務言語としてフランス語が広く使われている。',
+        currency: 'ウギア'),
+    const Country(
+        area: 'アフリカ',
+        name: 'モザンビーク共和国',
+        englishName: 'Republic of Mozambique',
+        capitalCity: 'マプト',
+        imageName: 'republic_of_mozambique',
+        language: 'ポルトガル語（公用語）、マクア語、シャンガーナ語、チェワ語、セナ語など ',
+        currency: 'メティカル'),
+    const Country(
+        area: '欧州',
+        name: 'モナコ公国',
+        englishName: 'Principality of Monaco',
+        capitalCity: 'モナコ',
+        imageName: 'principality_of_monaco',
+        language: 'フランス語（公用語）',
+        currency: 'ユーロ'),
+    const Country(
+        area: 'アジア',
+        name: 'モルディブ共和国',
+        englishName: 'Republic of Maldives',
+        capitalCity: 'マレ',
+        imageName: 'republic_of_maldives',
+        language: 'ディベヒ語',
+        currency: 'ルフィア'),
+    const Country(
+        area: '欧州',
+        name: 'モルドバ共和国',
+        englishName: 'Republic of Moldova',
+        capitalCity: 'キシナウ',
+        imageName: 'republic_of_moldova',
+        language: 'ルーマニア語。ロシア語も使われている。',
+        currency: 'モルドバ・レイ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'モロッコ王国',
+        englishName: 'Kingdom of Morocco',
+        capitalCity: 'ラバト',
+        imageName: 'kingdom_of_morocco',
+        language: 'アラビア語（公用語）、ベルベル語（公用語）、フランス語',
+        currency: 'モロッコ・ディルハム'),
+    const Country(
+        area: 'アジア',
+        name: 'モンゴル国',
+        englishName: 'Mongolia',
+        capitalCity: 'ウランバートル',
+        imageName: 'mongolia',
+        language: 'モンゴル語（国家公用語）、カザフ語',
+        currency: 'トグログ'),
+    const Country(
+        area: '欧州',
+        name: 'モンテネグロ',
+        englishName: 'Montenegro',
+        capitalCity: 'ポドゴリツァ',
+        imageName: 'montenegro',
+        language: 'モンテネグロ語（公用語）、セルビア語など',
+        currency: 'ユーロ'),
+    const Country(
+        area: '中東',
+        name: 'ヨルダン',
+        englishName: 'Jordan',
+        capitalCity: 'アンマン',
+        imageName: 'jordan',
+        language: 'アラビア語（英語も通用）',
+        currency: 'ヨルダン・ディナール'),
+    const Country(
+        area: 'アジア',
+        name: 'ラオス人民民主共和国',
+        englishName: 'Lao People’s Democratic Republic',
+        capitalCity: 'ビエンチャン',
+        imageName: 'lao_peoples_democratic_republic',
+        language: 'ラオス語',
+        currency: 'キープ'),
+    const Country(
+        area: '欧州',
+        name: 'ラトビア共和国',
+        englishName: 'Republic of Latvia',
+        capitalCity: 'リガ',
+        imageName: 'republic_of_latvia',
+        language: 'ラトビア語',
+        currency: 'ユーロ'),
+    const Country(
+        area: '欧州',
+        name: 'リトアニア共和国',
+        englishName: 'Republic of Lithuania',
+        capitalCity: 'ビリニュス',
+        imageName: 'republic_of_lithuania',
+        language: 'リトアニア語',
+        currency: 'ユーロ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'リビア国',
+        englishName: 'State of Libya',
+        capitalCity: 'トリポリ',
+        imageName: 'state_of_libya',
+        language: 'アラビア語',
+        currency: 'リビア・ディナール'),
+    const Country(
+        area: '欧州',
+        name: 'リヒテンシュタイン公国',
+        englishName: 'Principality of Liechtenstein',
+        capitalCity: 'ファドーツ',
+        imageName: 'principality_of_liechtenstein',
+        language: 'ドイツ語',
+        currency: 'スイス・フラン'),
+    const Country(
+        area: 'アフリカ',
+        name: 'リベリア共和国',
+        englishName: 'Republic of Liberia',
+        capitalCity: 'モンロビア',
+        imageName: 'republic_of_liberia',
+        language: '英語（公用語）、その他各部族語',
+        currency: 'リベリア・ドル'),
+    const Country(
+        area: '欧州',
+        name: 'ルーマニア',
+        englishName: 'Romania',
+        capitalCity: 'ブカレスト',
+        imageName: 'romania',
+        language: 'ルーマニア語（公用語）、ハンガリー語',
+        currency: 'レイ'),
+    const Country(
+        area: '欧州',
+        name: 'ルクセンブルク大公国',
+        englishName: 'Grand Duchy of Luxembourg',
+        capitalCity: 'ルクセンブルク',
+        imageName: 'grand_duchy_of_luxembourg',
+        language: 'ルクセンブルク語、フランス語、ドイツ語',
+        currency: 'ユーロ'),
+    const Country(
+        area: 'アフリカ',
+        name: 'ルワンダ共和国',
+        englishName: 'Republic of Rwanda',
+        capitalCity: 'キガリ',
+        imageName: 'republic_of_rwanda',
+        language: 'ルワンダ語、英語（2009年、公用語に追加され、フランス語に代わって教育言語となった）、フランス語、スワヒリ語',
+        currency: 'ルワンダ・フラン'),
+    const Country(
+        area: 'アフリカ',
+        name: 'レソト王国',
+        englishName: 'Kingdom of Lesotho',
+        capitalCity: 'マセル',
+        imageName: 'kingdom_of_lesotho',
+        language: '英語、ソト語（ともに公用語）',
+        currency: 'ロチ'),
+    const Country(
+        area: '中東',
+        name: 'レバノン共和国',
+        englishName: 'Lebanese Republic',
+        capitalCity: 'ベイルート',
+        imageName: 'lebanese_republic',
+        language: 'アラビア語（フランス語及び英語が通用）',
+        currency: 'レバノン・ポンド'),
+    const Country(
+        area: '欧州',
+        name: 'ロシア連邦',
+        englishName: 'Russian Federation',
+        capitalCity: 'モスクワ',
+        imageName: 'russian_federation',
+        language: 'ロシア語',
+        currency: 'ルーブル'),
+  ];
+}
