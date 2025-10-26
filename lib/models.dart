@@ -731,7 +731,7 @@ class Country {
         imageName: 'independent_state_of_samoa',
         language: 'サモア語、英語（ともに公用語）',
         currency: 'サモア・タラ',
-        nameAnswer: 'さもあ独立国',
+        nameAnswer: 'さもあどくりつこく',
         capitalAnswer: 'あぴあ'),
     const Country(
         area: 'アフリカ',

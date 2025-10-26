@@ -77,104 +77,144 @@ class _QuestionView extends StatefulWidget {
 }
 
 class _QuestionViewState extends State<_QuestionView> {
-  final _formFieldKey = GlobalKey<FormFieldState>();
+  final key = GlobalKey<FormFieldState<String>>();
   int hintCount = 0;
 
-  void submitAnswer() {
-    if (_formFieldKey.currentState?.validate() ?? false) {
-      hintCount = 0;
-      widget.onAnswered(true);
+  String get hint => widget.questionType == _QuestionType.countryName
+      ? widget.country.name
+      : widget.country.capitalCity;
+
+  String get answer => widget.questionType == _QuestionType.countryName
+      ? widget.country.nameAnswer
+      : widget.country.capitalAnswer;
+
+  String get input => key.currentState?.value ?? '';
+
+  set input(String value) {
+    key.currentState?.didChange(value);
+  }
+
+  String skipSymbols(String input) {
+    if (input.length == answer.length) {
+      return input;
     }
-    _formFieldKey.currentState?.didChange('');
+    final next = answer[input.length];
+    if (!_allowedChars.contains(next)) {
+      return skipSymbols(input + next);
+    }
+    return input;
+  }
+
+  void onTapKeyboard(String value) {
+    final newValue = input + value;
+    final answerChar = answer[newValue.length - 1];
+    if (value != answerChar) {
+      return;
+    }
+    setState(() {
+      input = skipSymbols(newValue);
+    });
+    if (input.length == answer.length) {
+      submitAnswer();
+    }
+  }
+
+  void submitAnswer() {
+    hintCount = 0;
+    widget.onAnswered(true);
+    input = '';
+  }
+
+  void giveUp() {
+    hintCount = 0;
+    widget.onAnswered(false);
+    input = '';
   }
 
   @override
   Widget build(BuildContext context) {
-    final answer = widget.questionType == _QuestionType.countryName
-        ? widget.country.name
-        : widget.country.capitalCity;
-
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
-          widget.questionType == _QuestionType.countryName
-              ? 'この国の名前は？'
-              : 'この国の首都は？',
-        ),
-        const SizedBox(height: 8),
-        Image.asset(
-          'assets/flags/${widget.country.imageName}.gif',
-          height: 80,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          widget.questionType == _QuestionType.countryName
-              ? '首都：${widget.country.capitalCity}'
-              : widget.country.name,
-        ),
-        const SizedBox(height: 16),
-        const Text('答え'),
-        Builder(
-          builder: (context) {
-            String display = '';
-            for (int i = 0; i < answer.length; i++) {
-              if (i < hintCount) {
-                display += answer[i];
-              } else {
-                display += '＿';
-              }
-            }
-            return Text(
-              display,
-              style: const TextStyle(fontSize: 32),
-            );
-          },
-        ),
-        TextButton(
-            onPressed: () {
-              setState(() {
-                hintCount++;
-              });
-            },
-            child: const Text('ヒント')),
-        const SizedBox(height: 32),
-        TextFormField(
-          key: _formFieldKey,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-          ),
-          autofocus: true,
-          onFieldSubmitted: (_) {
-            submitAnswer();
-          },
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return '回答を入力してください';
-            }
-            if (value != answer) {
-              return '不正解です';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-                child: OutlinedButton(
-                    onPressed: () {
-                      widget.onAnswered(false);
-                    },
-                    child: const Text('あきらめる'))),
-            const SizedBox(width: 8),
-            Expanded(
-              child: FilledButton(
-                onPressed: submitAnswer,
-                child: const Text('回答する'),
+        Expanded(
+          child: ListView(
+            children: [
+              Center(
+                child: Text(
+                  widget.questionType == _QuestionType.countryName
+                      ? 'この国の名前は？'
+                      : 'この国の首都は？',
+                ),
               ),
-            ),
-          ],
+              Center(child: const SizedBox(height: 8)),
+              Image.asset(
+                'assets/flags/${widget.country.imageName}.gif',
+                height: 80,
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: Text(
+                  widget.questionType == _QuestionType.countryName
+                      ? '首都：${widget.country.capitalCity}'
+                      : widget.country.name,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(child: const Text('答え')),
+              Center(
+                child: Builder(
+                  builder: (context) {
+                    String display = '';
+                    for (int i = 0; i < hint.length; i++) {
+                      if (i < hintCount) {
+                        display += hint[i];
+                      } else {
+                        display += '＿';
+                      }
+                    }
+                    return Text(
+                      display,
+                      style: const TextStyle(fontSize: 32),
+                    );
+                  },
+                ),
+              ),
+              Center(
+                child: TextButton(
+                    onPressed: () {
+                      setState(() {
+                        hintCount++;
+                      });
+                    },
+                    child: const Text('ヒント')),
+              ),
+              const SizedBox(height: 32),
+              TextFormField(
+                key: key,
+                readOnly: true,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                ),
+                autofocus: true,
+                onFieldSubmitted: (_) {
+                  submitAnswer();
+                },
+                keyboardType: TextInputType.none,
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: OutlinedButton(
+                  onPressed: giveUp,
+                  child: const Text('あきらめる'),
+                ),
+              ),
+              const SizedBox(height: 32),
+            ],
+          ),
+        ),
+        _KeyBoard(
+          answer: answer,
+          value: input,
+          onTap: onTapKeyboard,
         ),
       ],
     );
@@ -231,3 +271,133 @@ class _ResultView extends StatelessWidget {
     );
   }
 }
+
+class _KeyBoard extends StatelessWidget {
+  const _KeyBoard({
+    required this.answer,
+    required this.value,
+    required this.onTap,
+  });
+
+  final String answer;
+  final String value;
+  final ValueChanged<String> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (value.length >= answer.length) {
+      return const SizedBox.shrink();
+    }
+
+    final next = answer[value.length];
+    List<String> options = List.from(_allowedChars);
+    options.shuffle();
+    options.remove(next);
+    options = options.take(3).toList()
+      ..add(next)
+      ..shuffle();
+
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 8,
+      runSpacing: 8,
+      children: options.map((option) {
+        return SizedBox(
+          width: 64,
+          height: 64,
+          child: ElevatedButton(
+            onPressed: () => onTap(option),
+            child: Text(
+              option,
+              style: const TextStyle(fontSize: 24),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+List<String> get _allowedChars => <String>[
+      'あ',
+      'い',
+      'う',
+      'え',
+      'お',
+      'か',
+      'き',
+      'く',
+      'け',
+      'こ',
+      'さ',
+      'し',
+      'す',
+      'せ',
+      'そ',
+      'た',
+      'ち',
+      'つ',
+      'て',
+      'と',
+      'な',
+      'に',
+      'ぬ',
+      'ね',
+      'の',
+      'は',
+      'ひ',
+      'ふ',
+      'へ',
+      'ほ',
+      'ま',
+      'み',
+      'む',
+      'め',
+      'も',
+      'や',
+      'ゆ',
+      'よ',
+      'ら',
+      'り',
+      'る',
+      'れ',
+      'ろ',
+      'わ',
+      'を',
+      'ん',
+      'が',
+      'ぎ',
+      'ぐ',
+      'げ',
+      'ご',
+      'ざ',
+      'じ',
+      'ず',
+      'ぜ',
+      'ぞ',
+      'だ',
+      'ぢ',
+      'づ',
+      'で',
+      'ど',
+      'ば',
+      'び',
+      'ぶ',
+      'べ',
+      'ぼ',
+      'ぱ',
+      'ぴ',
+      'ぷ',
+      'ぺ',
+      'ぽ',
+      'ぁ',
+      'ぃ',
+      'ぅ',
+      'ぇ',
+      'ぉ',
+      'ゃ',
+      'ゅ',
+      'ょ',
+      'っ',
+      'ー',
+    ];
