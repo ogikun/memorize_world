@@ -107,7 +107,10 @@ class _QuestionViewState extends State<_QuestionView> {
 
   void onTapKeyboard(String value) {
     final newValue = input + value;
-    final answerChar = answer[newValue.length - 1];
+    if (newValue.length > answer.length) {
+      return;
+    }
+    final answerChar = answer.substring(input.length, newValue.length);
     if (value != answerChar) {
       return;
     }
@@ -145,7 +148,7 @@ class _QuestionViewState extends State<_QuestionView> {
                       : 'この国の首都は？',
                 ),
               ),
-              Center(child: const SizedBox(height: 8)),
+              const Center(child: SizedBox(height: 8)),
               Image.asset(
                 'assets/flags/${widget.country.imageName}.gif',
                 height: 80,
@@ -159,7 +162,7 @@ class _QuestionViewState extends State<_QuestionView> {
                 ),
               ),
               const SizedBox(height: 16),
-              Center(child: const Text('答え')),
+              const Center(child: Text('答え')),
               Center(
                 child: Builder(
                   builder: (context) {
@@ -215,6 +218,7 @@ class _QuestionViewState extends State<_QuestionView> {
           answer: answer,
           value: input,
           onTap: onTapKeyboard,
+          activateShorthands: widget.questionType == _QuestionType.countryName,
         ),
       ],
     );
@@ -273,15 +277,16 @@ class _ResultView extends StatelessWidget {
 }
 
 class _KeyBoard extends StatelessWidget {
-  const _KeyBoard({
-    required this.answer,
-    required this.value,
-    required this.onTap,
-  });
+  const _KeyBoard(
+      {required this.answer,
+      required this.value,
+      required this.onTap,
+      required this.activateShorthands});
 
   final String answer;
   final String value;
   final ValueChanged<String> onTap;
+  final bool activateShorthands;
 
   @override
   Widget build(BuildContext context) {
@@ -297,23 +302,48 @@ class _KeyBoard extends StatelessWidget {
       ..add(next)
       ..shuffle();
 
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: 8,
-      runSpacing: 8,
-      children: options.map((option) {
-        return SizedBox(
-          width: 64,
-          height: 64,
-          child: ElevatedButton(
-            onPressed: () => onTap(option),
-            child: Text(
-              option,
-              style: const TextStyle(fontSize: 24),
-            ),
+    return Column(
+      children: [
+        if (activateShorthands) ...[
+          Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: shorthands
+                  .map((e) => ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.all(16),
+                      ),
+                      onPressed: () {
+                        onTap(e.value);
+                      },
+                      child: Text(e.label)))
+                  .toList()),
+          const SizedBox(
+            height: 16,
           ),
-        );
-      }).toList(),
+        ],
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8,
+          runSpacing: 8,
+          children: options.map((option) {
+            return SizedBox(
+              width: 64,
+              height: 64,
+              child: ElevatedButton(
+                onPressed: () => onTap(option),
+                child: Center(
+                  child: Text(
+                    option,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 24),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }
@@ -401,3 +431,10 @@ List<String> get _allowedChars => <String>[
       'っ',
       'ー',
     ];
+
+const shorthands = [
+  (label: '国', value: 'こく'),
+  (label: '連邦', value: 'れんぽう'),
+  (label: '王国', value: 'おうこく'),
+  (label: '共和国', value: '共和国'),
+];
