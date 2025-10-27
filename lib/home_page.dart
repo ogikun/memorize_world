@@ -14,7 +14,9 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: ListView.separated(
-        separatorBuilder: (context, index) => const Divider(),
+        separatorBuilder: (context, index) => const Divider(
+          height: 1,
+        ),
         itemCount: Area.values.length,
         itemBuilder: (context, index) {
           final area = Area.values[index];
@@ -30,6 +32,7 @@ class _HomePageState extends State<HomePage> {
           ];
 
           return ListTile(
+            tileColor: Colors.white,
             title: Text(area.name),
             subtitle: Text('国の数: ${area.countries.length}'),
             trailing: Row(

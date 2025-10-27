@@ -137,69 +137,90 @@ class _QuestionViewState extends State<_QuestionView> {
       children: [
         Expanded(
           child: ListView(
+            padding: const EdgeInsets.all(24),
             children: [
-              Center(
-                child: Text(
-                  widget.questionType == _QuestionType.countryName
-                      ? 'この国の名前は？'
-                      : 'この国の首都は？',
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: const ShapeDecoration(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(24))),
+                    color: Colors.white),
+                child: Column(
+                  children: [
+                    Center(
+                      child: Text(
+                        widget.questionType == _QuestionType.countryName
+                            ? 'この国の名前は？'
+                            : 'この国の首都は？',
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const Center(child: SizedBox(height: 16)),
+                    Image.asset(
+                      'assets/flags/${widget.country.imageName}.gif',
+                      height: 160,
+                    ),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: Text(
+                        widget.questionType == _QuestionType.countryName
+                            ? '首都：${widget.country.capitalCity}'
+                            : widget.country.name,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Center(child: Text('答え')),
+                    Center(
+                      child: Builder(
+                        builder: (context) {
+                          String display = '';
+                          for (int i = 0; i < hint.length; i++) {
+                            if (i < hintCount) {
+                              display += hint[i];
+                            } else {
+                              display += '＿';
+                            }
+                          }
+                          return Text(
+                            display,
+                            style: const TextStyle(fontSize: 32),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 16,
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                              onPressed: () {
+                                setState(() {
+                                  hintCount++;
+                                });
+                              },
+                              child: const Text('ヒント')),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: giveUp,
+                            child: const Text('あきらめる'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              const Center(child: SizedBox(height: 8)),
-              Image.asset(
-                'assets/flags/${widget.country.imageName}.gif',
-                height: 80,
-              ),
-              const SizedBox(height: 8),
-              Center(
-                child: Text(
-                  widget.questionType == _QuestionType.countryName
-                      ? '首都：${widget.country.capitalCity}'
-                      : widget.country.name,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Center(child: Text('答え')),
-              Center(
-                child: Builder(
-                  builder: (context) {
-                    String display = '';
-                    for (int i = 0; i < hint.length; i++) {
-                      if (i < hintCount) {
-                        display += hint[i];
-                      } else {
-                        display += '＿';
-                      }
-                    }
-                    return Text(
-                      display,
-                      style: const TextStyle(fontSize: 32),
-                    );
-                  },
-                ),
-              ),
-              Center(
-                child: TextButton(
-                    onPressed: () {
-                      setState(() {
-                        hintCount++;
-                      });
-                    },
-                    child: const Text('ヒント')),
-              ),
-              const SizedBox(height: 16),
-              Center(
-                child: OutlinedButton(
-                  onPressed: giveUp,
-                  child: const Text('あきらめる'),
-                ),
-              ),
-              const SizedBox(height: 32),
             ],
           ),
         ),
         Material(
           elevation: 16,
+          color: Colors.white,
           shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
           child: SafeArea(
@@ -323,6 +344,8 @@ class _KeyBoard extends StatelessWidget {
               children: shorthands
                   .map((e) => ElevatedButton(
                       style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        shape: const RoundedRectangleBorder(),
                         padding: const EdgeInsets.all(16),
                       ),
                       onPressed: () {
@@ -351,6 +374,10 @@ class _KeyBoard extends StatelessWidget {
               width: 64,
               height: 64,
               child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    padding: EdgeInsets.zero,
+                    shape: const RoundedRectangleBorder()),
                 onPressed: () => onTap(option),
                 child: Center(
                   child: Text(
