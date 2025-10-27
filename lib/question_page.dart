@@ -35,28 +35,25 @@ class _QuestionPageState extends State<QuestionPage> {
 
     return Scaffold(
       appBar: AppBar(title: Text('${widget.area.name} - $title')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: remainingCountries.isEmpty
-            ? _ResultView(
-                correctQuestions: correctQuestions,
-                gaveUpQuestions: gaveUpQuestions,
-              )
-            : _QuestionView(
-                country: remainingCountries.first,
-                questionType: widget._questionType,
-                onAnswered: (isCorrect) {
-                  setState(() {
-                    final country = remainingCountries.removeAt(0);
-                    if (isCorrect) {
-                      correctQuestions.add(country);
-                    } else {
-                      gaveUpQuestions.add(country);
-                    }
-                  });
-                },
-              ),
-      ),
+      body: remainingCountries.isEmpty
+          ? _ResultView(
+              correctQuestions: correctQuestions,
+              gaveUpQuestions: gaveUpQuestions,
+            )
+          : _QuestionView(
+              country: remainingCountries.first,
+              questionType: widget._questionType,
+              onAnswered: (isCorrect) {
+                setState(() {
+                  final country = remainingCountries.removeAt(0);
+                  if (isCorrect) {
+                    correctQuestions.add(country);
+                  } else {
+                    gaveUpQuestions.add(country);
+                  }
+                });
+              },
+            ),
     );
   }
 }
@@ -190,19 +187,6 @@ class _QuestionViewState extends State<_QuestionView> {
                     },
                     child: const Text('ヒント')),
               ),
-              const SizedBox(height: 32),
-              TextFormField(
-                key: key,
-                readOnly: true,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                ),
-                autofocus: true,
-                onFieldSubmitted: (_) {
-                  submitAnswer();
-                },
-                keyboardType: TextInputType.none,
-              ),
               const SizedBox(height: 16),
               Center(
                 child: OutlinedButton(
@@ -214,11 +198,39 @@ class _QuestionViewState extends State<_QuestionView> {
             ],
           ),
         ),
-        _KeyBoard(
-          answer: answer,
-          value: input,
-          onTap: onTapKeyboard,
-          activateShorthands: widget.questionType == _QuestionType.countryName,
+        Material(
+          elevation: 16,
+          shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                children: [
+                  TextFormField(
+                    key: key,
+                    readOnly: true,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                    ),
+                    autofocus: true,
+                    onFieldSubmitted: (_) {
+                      submitAnswer();
+                    },
+                    keyboardType: TextInputType.none,
+                  ),
+                  const SizedBox(height: 16),
+                  _KeyBoard(
+                    answer: answer,
+                    value: input,
+                    onTap: onTapKeyboard,
+                    activateShorthands:
+                        widget.questionType == _QuestionType.countryName,
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -311,12 +323,20 @@ class _KeyBoard extends StatelessWidget {
               children: shorthands
                   .map((e) => ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(16),
                       ),
                       onPressed: () {
                         onTap(e.value);
                       },
-                      child: Text(e.label)))
+                      child: Column(
+                        children: [
+                          Text(
+                            e.value,
+                            style: const TextStyle(fontSize: 10, height: 0.5),
+                          ),
+                          Text(e.label),
+                        ],
+                      )))
                   .toList()),
           const SizedBox(
             height: 16,
@@ -436,5 +456,5 @@ const shorthands = [
   (label: '国', value: 'こく'),
   (label: '連邦', value: 'れんぽう'),
   (label: '王国', value: 'おうこく'),
-  (label: '共和国', value: '共和国'),
+  (label: '共和国', value: 'きょうわこく'),
 ];
