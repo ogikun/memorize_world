@@ -13,7 +13,8 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: ListView.builder(
+      body: ListView.separated(
+        separatorBuilder: (context, index) => const Divider(),
         itemCount: Area.values.length,
         itemBuilder: (context, index) {
           final area = Area.values[index];
