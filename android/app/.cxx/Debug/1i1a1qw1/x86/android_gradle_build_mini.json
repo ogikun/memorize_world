@@ -1,0 +1,20 @@
+{
+  "buildFiles": [
+    "/Users/ogi/fvm/versions/3.29.2/packages/flutter_tools/gradle/src/main/groovy/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/Users/ogi/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/Users/ogi/Desktop/memorize_world/android/app/.cxx/Debug/1i1a1qw1/x86",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/Users/ogi/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/Users/ogi/Desktop/memorize_world/android/app/.cxx/Debug/1i1a1qw1/x86",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {}
+}

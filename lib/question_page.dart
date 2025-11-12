@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:memorize_world/models.dart';
 
@@ -19,8 +21,12 @@ class QuestionPage extends StatefulWidget {
 
 class _QuestionPageState extends State<QuestionPage> {
   List<Country> remainingCountries = <Country>[];
-  List<Country> correctQuestions = <Country>[];
-  List<Country> gaveUpQuestions = <Country>[];
+  List<({Country country, bool isCorrect})> solvedCountries = [];
+
+  List<Country> get correctQuestions =>
+      solvedCountries.where((e) => e.isCorrect).map((e) => e.country).toList();
+  List<Country> get gaveUpQuestions =>
+      solvedCountries.where((e) => !e.isCorrect).map((e) => e.country).toList();
 
   @override
   void initState() {
@@ -34,7 +40,14 @@ class _QuestionPageState extends State<QuestionPage> {
         widget._questionType == _QuestionType.countryName ? '国名' : '首都';
 
     return Scaffold(
-      appBar: AppBar(title: Text('${widget.area.name} - $title')),
+      appBar: AppBar(
+          title: Row(
+        children: [
+          Expanded(child: Text('${widget.area.name} - $title')),
+          Text(
+              '${min(widget.area.countries.length - remainingCountries.length + 1, widget.area.countries.length)} / ${widget.area.countries.length}'),
+        ],
+      )),
       body: remainingCountries.isEmpty
           ? _ResultView(
               correctQuestions: correctQuestions,
@@ -42,15 +55,12 @@ class _QuestionPageState extends State<QuestionPage> {
             )
           : _QuestionView(
               country: remainingCountries.first,
+              solvedCountries: solvedCountries,
               questionType: widget._questionType,
               onAnswered: (isCorrect) {
                 setState(() {
                   final country = remainingCountries.removeAt(0);
-                  if (isCorrect) {
-                    correctQuestions.add(country);
-                  } else {
-                    gaveUpQuestions.add(country);
-                  }
+                  solvedCountries.add((country: country, isCorrect: isCorrect));
                 });
               },
             ),
@@ -61,10 +71,12 @@ class _QuestionPageState extends State<QuestionPage> {
 class _QuestionView extends StatefulWidget {
   const _QuestionView({
     required this.country,
+    required this.solvedCountries,
     required this.questionType,
     required this.onAnswered,
   });
 
+  final List<({Country country, bool isCorrect})> solvedCountries;
   final Country country;
   final _QuestionType questionType;
   final ValueChanged<bool> onAnswered;
@@ -75,6 +87,7 @@ class _QuestionView extends StatefulWidget {
 
 class _QuestionViewState extends State<_QuestionView> {
   final key = GlobalKey<FormFieldState<String>>();
+  final scrollController = ScrollController();
   int hintCount = 0;
 
   String get hint => widget.questionType == _QuestionType.countryName
@@ -91,6 +104,13 @@ class _QuestionViewState extends State<_QuestionView> {
     key.currentState?.didChange(value);
   }
 
+  void jumpToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      scrollController.animateTo(scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 100), curve: Curves.easeIn);
+    });
+  }
+
   String skipSymbols(String input) {
     if (input.length == answer.length) {
       return input;
@@ -103,6 +123,7 @@ class _QuestionViewState extends State<_QuestionView> {
   }
 
   void onTapKeyboard(String value) {
+    jumpToBottom();
     final newValue = input + value;
     if (newValue.length > answer.length) {
       return;
@@ -119,13 +140,22 @@ class _QuestionViewState extends State<_QuestionView> {
     }
   }
 
-  void submitAnswer() {
+  void submitAnswer() async {
     hintCount = 0;
     widget.onAnswered(true);
     input = '';
   }
 
+  void requestHint() {
+    jumpToBottom();
+    setState(() {
+      hintCount++;
+    });
+    jumpToBottom();
+  }
+
   void giveUp() {
+    jumpToBottom();
     hintCount = 0;
     widget.onAnswered(false);
     input = '';
@@ -137,84 +167,31 @@ class _QuestionViewState extends State<_QuestionView> {
       children: [
         Expanded(
           child: ListView(
+            controller: scrollController,
             padding: const EdgeInsets.all(24),
             children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: const ShapeDecoration(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(24))),
-                    color: Colors.white),
-                child: Column(
-                  children: [
-                    Center(
-                      child: Text(
-                        widget.questionType == _QuestionType.countryName
-                            ? 'この国の名前は？'
-                            : 'この国の首都は？',
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const Center(child: SizedBox(height: 16)),
-                    Image.asset(
-                      'assets/flags/${widget.country.imageName}.gif',
-                      height: 160,
-                    ),
-                    const SizedBox(height: 8),
-                    Center(
-                      child: Text(
-                        widget.questionType == _QuestionType.countryName
-                            ? '首都：${widget.country.capitalCity}'
-                            : widget.country.name,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Center(child: Text('答え')),
-                    Center(
-                      child: Builder(
-                        builder: (context) {
-                          String display = '';
-                          for (int i = 0; i < hint.length; i++) {
-                            if (i < hintCount) {
-                              display += hint[i];
-                            } else {
-                              display += '＿';
-                            }
-                          }
-                          return Text(
-                            display,
-                            style: const TextStyle(fontSize: 32),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(
-                      height: 16,
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextButton(
-                              onPressed: () {
-                                setState(() {
-                                  hintCount++;
-                                });
-                              },
-                              child: const Text('ヒント')),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: giveUp,
-                            child: const Text('あきらめる'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+              for (final previous in widget.solvedCountries)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _Card(
+                    questionType: widget.questionType,
+                    country: previous.country,
+                    giveUp: () {},
+                    requestHint: () {},
+                    hint: hint,
+                    hintCount: hintCount,
+                    isCorrect: previous.isCorrect,
+                  ),
                 ),
-              ),
+              _Card(
+                questionType: widget.questionType,
+                country: widget.country,
+                giveUp: giveUp,
+                requestHint: requestHint,
+                hint: hint,
+                hintCount: hintCount,
+                isCorrect: null,
+              )
             ],
           ),
         ),
@@ -303,6 +280,111 @@ class _ResultView extends StatelessWidget {
               );
             }).toList(),
           )),
+        ],
+      ),
+    );
+  }
+}
+
+class _Card extends StatelessWidget {
+  const _Card({
+    required this.questionType,
+    required this.country,
+    required this.giveUp,
+    required this.requestHint,
+    required this.hint,
+    required this.hintCount,
+    required this.isCorrect,
+  });
+
+  final _QuestionType questionType;
+  final Country country;
+  final VoidCallback giveUp;
+  final VoidCallback requestHint;
+  final String hint;
+  final int hintCount;
+  final bool? isCorrect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: ShapeDecoration(
+          shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(24))),
+          color: isCorrect != null
+              ? isCorrect!
+                  ? Colors.green.shade50
+                  : Colors.red.shade50
+              : Colors.white),
+      child: Column(
+        children: [
+          Center(
+            child: Text(
+              questionType == _QuestionType.countryName
+                  ? 'この国の名前は？'
+                  : 'この国の首都は？',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const Center(child: SizedBox(height: 16)),
+          Image.asset(
+            'assets/flags/${country.imageName}.gif',
+            height: 160,
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: Text(
+              questionType == _QuestionType.countryName
+                  ? '首都：${country.capitalCity}'
+                  : country.name,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: Builder(
+              builder: (context) {
+                String display = '';
+                if (isCorrect != null) {
+                  display = questionType == _QuestionType.countryName
+                      ? country.name
+                      : country.capitalCity;
+                } else {
+                  for (int i = 0; i < hint.length; i++) {
+                    if (i < hintCount) {
+                      display += hint[i];
+                    } else {
+                      display += '＿';
+                    }
+                  }
+                }
+                return Text(
+                  display,
+                  style: const TextStyle(fontSize: 32),
+                );
+              },
+            ),
+          ),
+          if (isCorrect == null) ...[
+            const SizedBox(
+              height: 16,
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                      onPressed: requestHint, child: const Text('ヒント')),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: giveUp,
+                    child: const Text('あきらめる'),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

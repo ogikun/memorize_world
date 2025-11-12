@@ -2,6 +2,7 @@
   "cSpell.words": [
     "'Ivoire",
     "Bolivarian",
+    "Buildables",
     "Burkina",
     "cabo",
     "d",
@@ -9,10 +10,15 @@
     "Eswatini",
     "Faso",
     "Leste",
+    "LLDB",
     "Marino",
+    "parallelizable",
     "Plurinational",
     "Rica",
+    "Testables",
     "Türkiye",
-    "Viet"
+    "Viet",
+    "xcodeproj",
+    "xctest"
   ]
 }

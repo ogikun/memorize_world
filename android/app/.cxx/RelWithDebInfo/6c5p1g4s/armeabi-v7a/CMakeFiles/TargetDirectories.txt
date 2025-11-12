@@ -1,0 +1,2 @@
+/Users/ogi/Desktop/memorize_world/android/app/.cxx/RelWithDebInfo/6c5p1g4s/armeabi-v7a/CMakeFiles/edit_cache.dir
+/Users/ogi/Desktop/memorize_world/android/app/.cxx/RelWithDebInfo/6c5p1g4s/armeabi-v7a/CMakeFiles/rebuild_cache.dir
